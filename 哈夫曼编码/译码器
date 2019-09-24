@@ -1,0 +1,503 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <malloc.h> 
+int N;//定义一个全局变量用来表示字符节点个数 
+//节点结构 
+typedef struct{
+    char data;//字符节点 
+    int weight;//权重 
+    int parent;  //父亲 
+    int lchild;//左孩子 
+	int rchild;//右孩子 
+}hafuman;
+//编码数据结构 
+typedef struct{
+	char bits[53];//存放编码数据 
+	int start; //标记开始存放的点 
+}hafumancode; 
+void buil_tree(hafuman *tree,int n)//哈夫曼树建立 ， 文件保存到HTree.txt
+{
+	getchar();
+	int i,j;
+	int min,cmin;
+	int m,cm;
+	char ch;
+	FILE *fp;
+	if((fp=fopen("HTree.txt","w+"))==NULL)//打开文件 
+	{
+		printf("哈夫曼文件打开失败\n");
+		return; 
+	}
+	//tree=(hafuman*)malloc(sizeof(hafuman)*(2*n));//申请节点空间 
+	for(i=0;i<n;i++)
+	{
+		tree[i].lchild=-1;//初始化 
+		tree[i].rchild=-1;
+		tree[i].parent=-1;
+	}
+	for(i=n;i<2*n-1;i++)//初始化其他剩下的结点 
+	 {
+	 	tree[i].data='*';
+	 	tree[i].weight=-1;
+	 	tree[i].lchild=-1;
+		tree[i].rchild=-1;
+		tree[i].parent=-1;
+	 }
+	 for(i=n;i<2*n-1;i++)
+	 {
+	 	min=cmin=999;//min时最小权值，cmin为次小权值 
+	 	m=cm=0;//m为最小的那个位置，cm为次小的位置 
+	 	for(j=0;j<i;j++)
+	 	{
+	 	  if(tree[j].parent==-1&&tree[j].weight<min)
+		  {
+		 	cmin=min;// 找到更小的就把最小那个值赋给次小的 
+		 	cm=m;
+		 	min=tree[j].weight;// 更小的那个值给最小的 
+		 	m=j;//位置也相应赋值 
+		  }
+		  else if(tree[j].parent==-1&&tree[j].weight<cmin)
+		  {
+		   cmin=tree[j].weight;
+		   cm=j;	
+		  }	
+		 }
+		 tree[i].weight=tree[m].weight+tree[cm].weight;//父亲节点权值为两个孩子的和 
+		 tree[i].lchild=m;//左孩子最小 
+		 tree[i].rchild=cm;//右孩子次小 
+		 //tree[i].parent=-1;                                                                                                                         
+		 tree[m].parent=i;//记录孩子的父母 
+		 tree[cm].parent=i;
+	 }
+	 for(i=0;i<n;i++)
+	 {
+	 	fprintf(fp,"%c %d %d %d %d\n",tree[i].data,tree[i].parent,tree[i].lchild,tree[i].rchild,tree[i].weight);
+	 	
+	 }
+	 for(i=n;i<2*n-1;i++)
+	 {
+	 	fprintf(fp,"  %d %d %d %d\n",tree[i].parent,tree[i].lchild,tree[i].rchild,tree[i].weight);
+	 }
+	if(fclose(fp))
+	{
+		printf("哈夫曼关闭失败!\n");
+		exit(1);
+	}
+}
+void hafuman_input_creat(hafuman tree[])//手动建立哈夫曼树 
+{
+	int i,j;
+	char ch;
+	printf("请输入字符个数(输入一个大于0小于60的数)\n");
+	scanf("%d",&N);
+	getchar();//每一次输入都要把换行符去掉
+	while(!(N>0&&N<=60))//判断字符格式对不对 
+	{
+		printf("输入方式不对，，请重新输入\n");
+		fflush(stdin);
+		scanf("%d",&N);
+		getchar();
+	}
+	 
+	for(i=0;i<N;i++)
+	{
+		
+		printf("请输入第【%d】个字符,请输入字母\n",i+1);		
+		scanf("%c",&tree[i].data);
+		getchar();
+		while(!(tree[i].data>='a'&&tree[i].data<='z')||(tree[i].data>='A'&&tree[i].data<='Z'))
+		{
+		   printf("输入方式不对，，请重新输入\n");//判断格式 
+		   fflush(stdin);
+		   scanf("%c",&tree[i].data);
+		   getchar();	
+		}
+		printf("请输入第【%d】个字符的权值\n",i+1);
+		scanf("%d",&tree[i].weight);
+		getchar();
+		while(!(tree[i].weight>=0&&tree[i].weight<999))
+		{
+		 printf("输入方式不对，，请重新输入\n");//判断格式 
+		 fflush(stdin);	
+		 scanf("%d",&tree[i].weight);
+		 getchar();	
+		}
+	 }
+	 buil_tree(tree,N); 
+	  printf("手动输入哈夫曼建树完毕！已经将哈夫曼树保存到HTree.txt中\n\n");
+	 
+}
+void hafuman_source_creat(hafuman *tree)//读取源文件建立哈夫曼树 ,文件保存到HTree.txt
+{
+  FILE *sf,*df;
+  char c,q;
+  char ch[53],sourcename[30];
+  int i=0,j,m=0,sum=0;
+  double count[53];//统计不同字符个数 
+  printf("请输入源文件所在路径：\n");
+  scanf("%s",sourcename);//输入源文件路径 
+  if((sf=fopen(sourcename,"r"))==NULL)//打开文件 
+  {
+  	printf("文件打开失败,找不到源文件\n");
+  	return; 
+  	
+  }
+  c=fgetc(sf);//先读入一个字符 
+  ch[0]=c;
+  sum=1;//统计文件全部字符个数 
+  j=1;
+  for(i=0;i<53;i++)//初始化 
+  {
+  	count[i]=0;
+  }
+  while(!feof(sf))
+  {
+  	for(i=0;i<j;i++)//j是统计当前ch[]数组中存入的元素个数，也就是源文件中不同字符的个数 
+  	{
+  		if(c==ch[i])
+  		{
+  			count[i]++;//统计相同字符的个数，也就是权值 
+  			m=-1;//m是作为判断标志，判断刚从文件读出的字符是否和之前的一样 
+		}
+	}
+	if(m==0)
+	{
+		ch[j]=c;//如果刚从文件读出来的字符是新的字符，没有和之前一样的就进入数组ch[] 
+		count[j]++;//每次读入的新字符也要加进权值中  
+		j++;//j加一 
+	}
+	c=fgetc(sf);
+	sum++;
+	m=0;//每次都要初始化 
+  }
+  N=j;//赋值给N,统计字符个数 
+  if((df=fopen("qzdata.txt","w"))==NULL)//打开权值存储文件 
+  {
+  	printf("权值文件打开失败\n");
+  	return; 
+
+  }
+  for(i=0;i<j;i++)//写入权值文件 
+  {
+  	fprintf(df,"%c %.1f\n",ch[i],count[i]);
+   }
+   if(fclose(df))
+   {
+   	printf("权值文件关闭失败！\n");
+   	return; 
+   }
+    
+  printf("源文件全部字符有：\n");
+  rewind(sf);//回到文件首部，重新读
+  while(!feof(sf))//输出全部字符 
+  {
+  	q=fgetc(sf);
+  	printf("%c",q);
+  	
+   }
+   printf("\n");
+  printf("源文件字符总数有【%d】个\n\n",sum-1);
+  for(i=0;i<j;i++)
+   {
+  	printf("文件第【%d】个字符为【%c】\n",i+1,ch[i]);
+  	printf("-------------权值为【%.0f】\n",count[i]);
+   }
+  printf("统计的字符权值已经存入权值qzdata.txt文件中\n");
+  for(i=0;i<j;i++)//把值赋给节点，用节点建树 
+    {
+   	tree[i].data=ch[i];
+   	tree[i].weight=count[i];
+	} 
+   buil_tree(tree,j);//调用建树函数 
+   printf("源文件哈夫曼建树完毕！已经将哈夫曼树保存到HTree.txt中\n\n"); 
+   if(fclose(sf))
+	{
+	  	printf("文件关闭失败\n");
+	  	return; 
+	} 
+} 
+void hafuman_code_creat(hafuman *tree,hafumancode *code)//构建哈夫曼编码 ,文件保存到HNode.txt 
+{
+   	int i,parents,child;
+   	FILE *fp,*ff;
+   	char ch;
+   	int k;
+   	hafumancode temp;//定义一个指向编码结构
+   	
+	for(i=0;i<N;i++)//开始构建 
+	{
+		child=i;//从每一个叶子节点开始构建 
+		parents=tree[i].parent;
+		temp.start=N;//start记录读取位置 
+		while(parents!=-1)
+		{
+			if(tree[parents].lchild==child)
+			{
+				temp.bits[--temp.start]='0';//左孩子为0
+				
+			}
+			else
+			{
+				temp.bits[--temp.start]='1';//右孩子为1  
+			}
+			child=parents;
+			parents=tree[child].parent;
+			
+		}
+		code[i]=temp;//保存每一次的哈夫曼编码 
+	}
+
+	if((ff=fopen("HNode.txt","w+"))==NULL)//打开 
+	{
+		printf("节点文件打开失败！\n");
+		return; 
+		
+	}
+	printf("构建的哈夫曼树编码为：\n\n");
+	for(i=0;i<N;i++)
+	{
+		fprintf(ff,"%c ",tree[i].data);//先存字符再存编码 
+		printf("字符【%c】哈夫曼编码为：",tree[i].data);//输出字符编码 
+		for(k=code[i].start;k<N;k++)
+		{
+			fprintf(ff,"%c ",code[i].bits[k]);//编码存入文件 
+			printf("%c ",code[i].bits[k]);
+		}
+		ch='\n';
+		fputc(ch,ff);//把一个换行符写进文件 
+		printf("\n");
+	}
+	printf("\n构建的哈夫曼编码已经存入文件HNode.txt中!\n");
+	if(fclose(ff))
+	{
+	  printf("哈夫曼编码文件关闭失败!\n");
+	  return; 	
+	} 
+}
+
+void hafuman_encode(hafuman tree[],hafumancode *code)//源文件加密 ,文件保存到CodeFile.txt 
+{
+	int i,m=0;
+	char sourcename[30]; 
+	char ch,q;
+	FILE *sf,*cf,*bf;//cf是密文文件 
+	int k=0,sum=0;//sum统计个数 
+ 	printf("请输入要编码的源文件路径：\n"); 
+ 	scanf("%s",sourcename);
+ 	if((sf=fopen(sourcename,"r+"))==NULL)// 打开文件 
+ 	{
+ 		printf("源文件文件打开失败！\n");
+ 	    return; 
+ 		
+	 }
+	 if((cf=fopen("CodeFile.txt","w+"))==NULL)
+	 {
+	 	printf("加密文件文件打开失败！\n");
+	 	return; 
+	 }
+	 printf("源文件全部字符有：\n");
+     while(!feof(sf))//输出全部字符 
+     {
+  	 q=fgetc(sf);
+  	 printf("%c",q);
+     }
+     printf("\n\n");
+	 printf("对源文编码加密如下：\n");
+	 rewind(sf);//回到文件首部，重新读
+	 ch=fgetc(sf);
+	 
+	while(!feof(sf))
+	 {
+	 	
+	 	for(i=0;i<N;i++)//找到对应的哈夫曼节点就输出编码 
+	 	{
+	 		
+	 		if(ch==tree[i].data) 
+	 		{
+	 			for(k=code[i].start;k<N;k++)//输出编码 
+	 			{	
+	 				fprintf(cf,"%c",code[i].bits[k]);
+	 				printf("%c",code[i].bits[k]);
+	 				sum++;
+	 				m=-1;//用来判断是否找到相应字符 
+				}
+			
+				break;
+			 }
+			 	 
+		 }
+		 if(m==0)
+		  printf("\n找不到相应字符!!!\n"); 
+		 ch=fgetc(sf);
+		 m=0;
+	 }
+	 printf("\n\n");
+	 printf("一共有【%d】个字符,加密结果已经存入CodeFile.txt中\n",sum);
+	 if(fclose(sf))
+	 {
+	 	printf("源文件关闭失败！\n");
+	 	return; 
+	 }
+	 if(fclose(cf))
+	 {
+	 	printf("编码加密文件关闭失败！\n");
+	 	return; 
+	 	
+	 }
+}
+void hafuman_decoding(hafuman tree[],hafumancode *code)//译码，并把文件保存到TextFile.txt 
+{
+	FILE *cf,*tf;
+	int i;
+	char ch; 
+	if((cf=fopen("CodeFile.txt","r"))==NULL )
+	 {
+	 	printf("加密文件文件打开失败！\n");
+	 	return; 
+	 } 
+	 if((tf=fopen("TextFile.txt","w+"))==NULL) 
+	 {
+	 	printf("译文文件文件打开失败！\n");
+	 	return; 
+	 }
+	 ch=fgetc(cf);
+	 i=2*N-2;//从根节点开始 
+	 while(!feof(cf))
+	 {
+	 	if(ch=='0')
+	 	{
+	 	  i=tree[i].lchild;	//判断是左孩子还是右孩子 
+		 }
+		 else if(ch=='1')
+		 {
+		 	i=tree[i].rchild;
+		 }
+		 if(tree[i].lchild==-1)//到叶子节点停止 
+		 {
+		 	fprintf(tf,"%c",tree[i].data);//写入文件 
+		 	i=2*N-2;//每次都要从根节点开始 
+		 }
+		 ch=fgetc(cf);
+	 }
+	 fclose(cf);//关闭文件 
+	 fclose(tf);
+	 if(tree[i].lchild!=0&&i!=2*N-2)//判断电文代码 
+	 {
+	 	printf("电文有误!!\n");
+	 }
+	 else
+	 {
+	 printf("译码成功！！\n译码后的内容为：\n\n");
+	 if((tf=fopen("TextFile.txt","r+"))==NULL) 
+	 {
+	 	printf("译文文件文件打开失败！\n");
+	 	return; 
+	 }
+	 ch=fgetc(tf);
+	 while(!feof(tf))//从文件里输出译码后内容 
+	 {
+	 	printf("%c",ch);
+	 	ch=fgetc(tf);
+	 }
+	 printf("\n");
+	 if(fclose(tf))
+	 {
+	 	printf("译码文件关闭失败！！\n");
+	 	return; 
+	 }
+	 }
+}
+void output_hafuman_tree(hafuman tree[])//哈夫曼树输出函数 
+{
+	int i;
+	FILE *fp;
+ 	if((fp=fopen("HTree.txt","r+"))==NULL)//打开文件 
+	{
+		printf("文件打开失败\n");
+		return; 
+	}
+	for(i=0;i<N;i++)//输出哈夫曼树节点内容 
+	{
+		printf("第【%d】个字符【%c】节点哈夫曼树节点为：\n",i+1,tree[i].data);
+		printf("***父母---左孩子---右孩子---权值***\n");
+		printf("    %d      %d       %d        %d\n\n",tree[i].parent,tree[i].lchild,tree[i].rchild,tree[i].weight);
+	}
+	for(i=N;i<2*N-1;i++)
+	{
+		printf("第【%d】个节点哈夫曼树节点为：\n",i+1);
+		printf("***父母---左孩子---右孩子---权值***\n");
+		printf("*   %d      %d        %d      %d   *\n\n",tree[i].parent,tree[i].lchild,tree[i].rchild,tree[i].weight);
+	}
+	if(fclose(fp))
+	{
+		printf("关闭失败!\n");
+		return;  
+	}
+	
+}
+//主函数设计 
+int main(int argc, char *argv[])
+{
+	int choose;
+	int choose1;
+	int n;
+	hafuman tree[60];
+	hafumancode code[60];
+	while(1)
+	{
+		//system("cls");//清屏函数 
+		printf("\n*****欢迎使用哈夫曼编码/译码系统*****\n"); 
+		printf("**-------您可以进行以下操作------------------**\n");
+		printf("**      1.建立哈夫曼树               **\n");
+		printf("**      2.构造哈夫曼树编码           **\n");
+		printf("**      3.编码加密                   **\n");
+		printf("**      4.显示哈夫曼树              **\n");
+		printf("**      5.译码                      **\n");
+		printf("**      0.退出系统                  **\n");
+		printf("**---------------------------------------------------**\n");
+		printf("请选择一个操作\n");
+		scanf("%d",&choose);
+		printf("\n");
+		switch(choose)
+		{
+			case 1:
+				printf("请选择建立方式：1.从源文件夹读取 2.手动输入\n");
+				scanf("%d",&choose1); 
+				switch(choose1)
+				{
+					case 1:
+					hafuman_source_creat(tree);//通过源文件建哈夫曼树 
+					break;
+					case 2:
+					hafuman_input_creat(tree);//手动输入建立 
+					break;
+					default:
+				    printf("**输入的选择无效* *请重新输入* *谢谢**\n\n");
+				    break;	
+				}
+				break;
+			case 2:
+				hafuman_code_creat(tree,code);//构建哈夫曼编码 
+				break;
+			case 3:
+				hafuman_encode(tree,code);//编码加密 
+				break;
+			case 4:
+				output_hafuman_tree(tree);//输入哈夫曼树节点 
+				break;
+			case 5:
+				hafuman_decoding(tree,code);//译码 
+				break;
+			case 0:
+				printf("感谢您使用本系统,祝您新年快乐，生活愉快，万事如意\n"); 
+				exit(0);
+				break;
+			default:
+				printf("**输入的选择无效---重新输入---谢谢 **\n\n");
+				break;		
+		}
+		 
+	}
+	return 0;
+}
